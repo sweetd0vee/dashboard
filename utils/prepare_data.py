@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 import glob
-
 import warnings
 
 
@@ -15,38 +14,36 @@ class DATA:
             'disk.maxtotallatency.latest', 'disk.provisioned.latest',
             'disk.unshared.latest', 'disk.usage.average', 'disk.used.latest',
             # Memory метрики
-            'mem.consumed.average', 'mem.overhead.average','mem.swapinrate.average',
+            'mem.consumed.average', 'mem.overhead.average', 'mem.swapinrate.average',
             'mem.swapoutrate.average', 'mem.usage.average', 'mem.vmmemctl.average',
             # Метрики Сети
             'net.usage.average',
             # Системные метрики
             'sys.uptime.latest']
         self.units = {
-            'cpu.ready.summation' : '',
-            'cpu.usage.average': '',
-            'cpu.usagemhz.average': '',
-            'disk.maxtotallatency.latest': '',
-            'disk.provisioned.latest': '',
-            'disk.unshared.latest': '',
-            'disk.usage.average': '',
-            'disk.used.latest': '',
-            'mem.consumed.average': '',
-            'mem.overhead.average': '',
-            'mem.swapinrate.average': '',
-            'mem.swapoutrate.average': '',
-            'mem.usage.average': '',
-            'mem.vmmemctl.average': '',
-            'net.usage.average': '',
-            'sys.uptime.latest': ''
-
+            'cpu.ready.summation': 'millisecond',
+            'cpu.usage.average': '%',
+            'cpu.usagemhz.average': 'MHz',
+            'disk.maxtotallatency.latest': 'millisecond',
+            'disk.provisioned.latest': 'KB',
+            'disk.unshared.latest': 'KB',
+            'disk.usage.average': 'KBps',
+            'disk.used.latest': 'KB',
+            'mem.consumed.average': 'KB',
+            'mem.overhead.average': 'KB',
+            'mem.swapinrate.average': 'KBps',
+            'mem.swapoutrate.average': 'KBps',
+            'mem.usage.average': '%',
+            'mem.vmmemctl.average': 'KB',
+            'net.usage.average': 'KBps',
+            'sys.uptime.latest': 'second'
         }
-
 
     @staticmethod
     def process_temp(folder_path='../data/source/temp',
-                     out_file='../data/processed/temp.xlsx') -> pd.DataFrame():
+                     out_file='../data/processed/temp.xlsx') -> pd.DataFrame:
         """
-            Подготавливает данные CSV файлов из папки temp/ по серверам за период: с 25-11-2025 по 01-12-2025 (включительно)
+        Подготавливает данные CSV файлов из папки temp/ по серверам за период: с 25-11-2025 по 01-12-2025 (включительно)
         """
         if not os.path.isdir(folder_path):
             raise ValueError(f"Folder '{folder_path}' does not exist or is not a directory")
@@ -63,95 +60,216 @@ class DATA:
         for f in files:
             df = pd.read_csv(f)
             list_of_dfs.append(df)
+
+        if not list_of_dfs:
+            warnings.warn("No dataframes to concatenate")
+            return pd.DataFrame()
+
         df = pd.concat(list_of_dfs, ignore_index=True)
-        print(f"Lenfth of raw dataframe: {len(df)}")
+        print(f"Length of raw dataframe: {len(df)}")
 
         # Обрабатываем колонки нового файла
         df['Timestamp'] = pd.to_datetime(df['Timestamp'], format='%d.%m.%y %H:%M:%S', errors='coerce')
+
+        # Удаляем строки с некорректными датами
+        initial_len = len(df)
+        df = df.dropna(subset=['Timestamp'])
+        if len(df) < initial_len:
+            print(f"Removed {initial_len - len(df)} rows with invalid timestamps")
+
         df = df.sort_values(by=['VM', 'Metric', 'Timestamp'], ascending=[True, True, True])
 
         # ['vm', 'metric', 'timestamp'] является индексом в базе данных. Они не должны дублироваться
+        initial_len = len(df)
         df = df.drop_duplicates(subset=['VM', 'Metric', 'Timestamp'], keep='last')
+        print(f"Removed {initial_len - len(df)} duplicate rows")
 
         # Оставляем только колонки 'vm', 'timestamp', 'metric', 'value' для занесения в базу с фактами
-        df.drop(columns=['Unit', 'Date', 'Time'], inplace=True)
-        df.rename(columns={'VM': 'vm',
-                            'Timestamp': 'timestamp',
-                            'Metric': 'metric',
-                            'Value': 'value'}, inplace=True)
+        # Проверяем наличие колонок перед удалением
+        cols_to_drop = ['Unit', 'Date', 'Time']
+        cols_to_drop = [col for col in cols_to_drop if col in df.columns]
+        if cols_to_drop:
+            df.drop(columns=cols_to_drop, inplace=True)
 
-        print(f"Length of dataframe after dropping duplicates: {len(df)}")
+        df.rename(columns={'VM': 'vm',
+                           'Timestamp': 'timestamp',
+                           'Metric': 'metric',
+                           'Value': 'value'}, inplace=True)
+
+        print(f"Length of dataframe after processing: {len(df)}")
+
+        # Статистика по данным
+        print(f"Unique VMs: {df['vm'].nunique()}")
+        print(f"Unique metrics: {df['metric'].nunique()}")
+        print(f"Time range: {df['timestamp'].min()} to {df['timestamp'].max()}")
+
         # Сохраняем результат
         try:
+            # Создаем директорию, если её нет
+            os.makedirs(os.path.dirname(out_file), exist_ok=True)
             df.to_excel(out_file, index=False)
-            print(f"Data saved to {out_file}")
+            print(f"Data successfully saved to {out_file}")
         except Exception as e:
             print(f"Error saving to Excel: {e}")
 
         return df
 
-
     @staticmethod
     def process_data(in_file='../data/source/data.csv',
-                     out_file='../data/processed/data.xlsx') -> pd.DataFrame():
+                     out_file='../data/processed/data.xlsx') -> pd.DataFrame:
         """
         Подготавливаем данные по серверам за период: с 04-12-2025 по 07-12-2025 (включительно)
         """
-        df = pd.read_csv(in_file)
+        try:
+            df = pd.read_csv(in_file)
+        except FileNotFoundError:
+            print(f"File not found: {in_file}")
+            return pd.DataFrame()
+        except Exception as e:
+            print(f"Error reading file: {e}")
+            return pd.DataFrame()
+
         print(f"Length of initial dataframe: {len(df)}")
 
-        df.drop(columns=['vCenter', 'Unit', 'Date', 'Time'], inplace=True)
-        df.rename(columns={
+        # Проверяем наличие колонок перед удалением
+        cols_to_drop = ['vCenter', 'Unit', 'Date', 'Time']
+        cols_to_drop = [col for col in cols_to_drop if col in df.columns]
+        if cols_to_drop:
+            df.drop(columns=cols_to_drop, inplace=True)
+
+        # Проверяем наличие колонок для переименования
+        rename_dict = {
             'VM_Name': 'vm',
             'Metric': 'metric',
             'Value': 'value',
             'Timestamp': 'timestamp'
-        }, inplace=True)
+        }
+
+        # Переименовываем только существующие колонки
+        rename_mapping = {old: new for old, new in rename_dict.items() if old in df.columns}
+        if rename_mapping:
+            df.rename(columns=rename_mapping, inplace=True)
+        else:
+            print("Warning: No columns to rename found")
 
         # ['vm', 'metric', 'timestamp'] является индексом в базе данных. Они не должны дублироваться
+        initial_len = len(df)
         df = df.drop_duplicates(subset=['vm', 'metric', 'timestamp'], keep='last')
-        print(f"Length of dataframe after dropping duplicates: {len(df)}")
+        print(f"Removed {initial_len - len(df)} duplicate rows")
 
         # Обрабатываем колонки нового файла
         df['timestamp'] = pd.to_datetime(df['timestamp'], format='%d.%m.%y %H:%M:%S', errors='coerce')
+
+        # Удаляем строки с некорректными датами
+        initial_len = len(df)
+        df = df.dropna(subset=['timestamp'])
+        if len(df) < initial_len:
+            print(f"Removed {initial_len - len(df)} rows with invalid timestamps")
+
         df = df.sort_values(by=['vm', 'metric', 'timestamp'], ascending=[True, True, True])
+
+        # Статистика по данным
+        print(f"Length of dataframe after processing: {len(df)}")
+        print(f"Unique VMs: {df['vm'].nunique()}")
+        print(f"Unique metrics: {df['metric'].nunique()}")
+        print(f"Time range: {df['timestamp'].min()} to {df['timestamp'].max()}")
 
         # Сохраняем результат
         try:
+            # Создаем директорию, если её нет
+            os.makedirs(os.path.dirname(out_file), exist_ok=True)
             df.to_excel(out_file, index=False)
-            print(f"Data saved to {out_file}")
+            print(f"Data successfully saved to {out_file}")
         except Exception as e:
             print(f"Error saving to Excel: {e}")
 
         return df
 
-
-    def pivot_metrics(data_path="data/data.csv",
-                     out_path="data/Сводная таблица по метрикам.xlsx"
-                     ) -> pd.DataFrame:
+    @staticmethod
+    def pivot_metrics(df: pd.DataFrame, out_file: str) -> pd.DataFrame:
         """
-        processes csv file with metrics
-        :param data_path: path to file with data for all servers
-        :param out_path: path to save processed data
-        :return: pivot table with all metrics for servers
+        Приводит датафрейм с колонками ['vm', 'metric', 'timestamp', 'value'] в формат сводной таблицы
+        по каждой метрике
         """
-        try:
-            # columns = ['VM_Name', 'vCenter', 'Metric', 'Value', 'Unit', 'Timestamp', 'Date', 'Time']
-            df = pd.read_csv(data_path)
-        except Exception as e:
-            print(f"Ошибка при чтении файла: {e}")
+        if df.empty:
+            print("Empty dataframe provided, cannot create pivot table")
             return pd.DataFrame()
 
-        df_wide = df.pivot_table(
-            index=['VM_Name', 'vCenter', 'Timestamp'],
-            columns='Metric',
-            values='Value',
-            aggfunc='first'  # на случай дублей
-        ).reset_index()
+        # Проверяем наличие необходимых колонок
+        required_cols = ['vm', 'timestamp', 'metric', 'value']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            print(f"Missing required columns for pivot: {missing_cols}")
+            return pd.DataFrame()
 
-        df_wide = df_wide.sort_values(['VM_Name', 'vCenter', 'Timestamp']).reset_index(drop=True)
-        df_wide.to_excel(out_path)
+        try:
+            df_wide = df.pivot_table(
+                index=['vm', 'timestamp'],
+                columns='metric',
+                values='value',
+                aggfunc='first'  # на случай дублей
+            ).reset_index()
+
+            # Переименуем колонки, чтобы убрать multiindex
+            df_wide.columns.name = None
+
+            # ВАЖНО: Исправляем сортировку - убираем 'metric' из sort_values
+            df_wide = df_wide.sort_values(['vm', 'timestamp'], ascending=[True, True]).reset_index(drop=True)
+
+            print(f"Created pivot dataframe with {len(df_wide)} rows and {len(df_wide.columns)} columns")
+            print(f"Metrics in pivot table: {[col for col in df_wide.columns if col not in ['vm', 'timestamp']]}")
+
+            # Сохраняем результат
+            os.makedirs(os.path.dirname(out_file), exist_ok=True)
+            df_wide.to_excel(out_file, index=False)
+            print(f"Pivot table successfully saved to {out_file}")
+
+        except Exception as e:
+            print(f"Error creating pivot table: {e}")
+            return pd.DataFrame()
+
         return df_wide
+
+    def analyze_data(self, df: pd.DataFrame) -> dict:
+        """
+        Анализирует данные и возвращает статистику
+        """
+        if df.empty:
+            return {}
+
+        analysis = {
+            'total_rows': len(df),
+            'unique_vms': df['vm'].nunique() if 'vm' in df.columns else 0,
+            'unique_metrics': df['metric'].nunique() if 'metric' in df.columns else 0,
+            'time_range': None,
+            'missing_metrics': [],
+            'data_completeness': {}
+        }
+
+        if 'timestamp' in df.columns and not df['timestamp'].isna().all():
+            analysis['time_range'] = {
+                'start': df['timestamp'].min(),
+                'end': df['timestamp'].max(),
+                'days': (df['timestamp'].max() - df['timestamp'].min()).days
+            }
+
+        # Проверяем полноту метрик
+        if 'metric' in df.columns:
+            present_metrics = df['metric'].unique()
+            missing_metrics = [m for m in self.metrics if m not in present_metrics]
+            analysis['missing_metrics'] = missing_metrics
+
+            # Вычисляем полноту данных по каждой метрике
+            for metric in self.metrics:
+                if metric in present_metrics:
+                    metric_data = df[df['metric'] == metric]
+                    analysis['data_completeness'][metric] = {
+                        'count': len(metric_data),
+                        'vms': metric_data['vm'].nunique() if 'vm' in metric_data.columns else 0,
+                        'completeness_percentage': round(len(metric_data) / len(df) * 100, 2)
+                    }
+
+        return analysis
 
 
 if __name__ == '__main__':
@@ -160,16 +278,47 @@ if __name__ == '__main__':
 
     # 1. Готовим данные значений метрик выгруженные по 20 серверам за период: с 25-11-2025 по 01-12-2025 (включительно)
     # Папка с данными data/source/temp/ собранный датафрейм сохраняется в файл data/processed/temp.xlsx
-    #df = data.process_temp(folder_path='../data/source/temp',
-    #                       out_file='../data/processed/25-11-2025_01-12-2025.xlsx')
+    print("=" * 60)
+    print("Processing temp data...")
+    print("=" * 60)
+    df1 = data.process_temp(folder_path='../data/source/temp',
+                            out_file='../data/processed/temp.xlsx')
+
+    if not df1.empty:
+        print("\nAnalysis of temp data:")
+        analysis1 = data.analyze_data(df1)
+        print(f"Total rows: {analysis1.get('total_rows', 0)}")
+        print(f"Unique VMs: {analysis1.get('unique_vms', 0)}")
+        print(f"Unique metrics: {analysis1.get('unique_metrics', 0)}")
 
     # 2. Готовим данные значений метрик выгруженные по всем серверам и сферам за период: с 04-12-2025 по 07-12-2025 (включительно)
     # Исходник находится в файле data/source/data.csv и сохраняется в файл data/processed/data.xlsx
-    df = data.process_data(in_file='../data/source/data.csv',
-                           out_file='../data/processed/data.xlsx')
+    print("\n" + "=" * 60)
+    print("Processing data.csv...")
+    print("=" * 60)
+    df2 = data.process_data(in_file='../data/source/data.csv',
+                            out_file='../data/processed/data.xlsx')
+
+    if not df2.empty:
+        print("\nAnalysis of data.csv:")
+        analysis2 = data.analyze_data(df2)
+        print(f"Total rows: {analysis2.get('total_rows', 0)}")
+        print(f"Unique VMs: {analysis2.get('unique_vms', 0)}")
+        print(f"Unique metrics: {analysis2.get('unique_metrics', 0)}")
 
     # 3. Далее создаем сводную таблицу по этим серверам и метрикам
-    # df_wide = data.pivot_metrics()
+    if not df1.empty:
+        print("\n" + "=" * 60)
+        print("Creating pivot table for temp data...")
+        print("=" * 60)
+        df_wide1 = data.pivot_metrics(df1, out_file='../data/processed/temp_pivot.xlsx')
 
-    # 3. Готовим данные по
+    if not df2.empty:
+        print("\n" + "=" * 60)
+        print("Creating pivot table for data.csv...")
+        print("=" * 60)
+        df_wide2 = data.pivot_metrics(df2, out_file='../data/processed/data_pivot.xlsx')
 
+    print("\n" + "=" * 60)
+    print("Processing completed!")
+    print("=" * 60)
