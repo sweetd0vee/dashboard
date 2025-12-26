@@ -1,7 +1,9 @@
-import pandas as pd
-import os
 import glob
+import os
 import warnings
+from datetime import datetime, timedelta
+
+import pandas as pd
 
 
 class DATA:
@@ -38,6 +40,35 @@ class DATA:
             'net.usage.average': 'KBps',
             'sys.uptime.latest': 'second'
         }
+
+
+    @staticmethod
+    def read_all_vm(file_path='../data/source/all_vm.txt') -> pd.DataFrame:
+        """
+        Приводим данные из файла по мощностям всех серверов в понятный формат
+        """
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+
+        # Парсим строки
+        data = []
+        for line in lines:
+            # Убираем кавычки и разделяем по запятым
+            cleaned_line = line.strip().strip('"').replace('","', ',').replace('"', '')
+            parts = cleaned_line.split(',')
+            data.append(parts)
+
+        # Создаем DataFrame
+        df = pd.DataFrame(data[1:], columns=data[0])
+
+        # Сохраняем результат
+        out_file = '../data/processed/all_vm.xlsx'
+        try:
+            df.to_excel(out_file, index=False)
+            print(f"Data successfully saved to {out_file}")
+        except Exception as e:
+            print(f"Error saving to Excel: {e}")
+        return df
 
     @staticmethod
     def process_temp(folder_path='../data/source/temp',
@@ -271,8 +302,106 @@ class DATA:
 
         return analysis
 
+    def process_data_metric(self, data_source: str,
+                            vm: str,
+                            metric: str,
+                            start_date: datetime,
+                            end_date: datetime) -> pd.DataFrame:
+        """
+        Обрабатывает данные для конкретной метрики в заданный период времени.
 
-if __name__ == '__main__':
+        Parameters:
+        -----------
+        data_source : str
+            Источник данных ('temp' или 'data')
+        metric : str
+            Название метрики для фильтрации
+        start_date : datetime
+            Начальная дата периода
+        end_date : datetime
+            Конечная дата периода
+
+        Returns:
+        --------
+        pd.DataFrame
+            Отфильтрованный датафрейм с данными по указанной метрике
+        """
+        # Определяем путь к файлу в зависимости от источника данных
+        if data_source == 'temp':
+            data_path = '../data/source/temp.xlsx'
+        elif data_source == 'data':
+            data_path = '../data/source/data.xlsx'
+        else:
+            raise ValueError(f"Неизвестный источник данных: {data_source}. "
+                             f"Допустимые значения: 'temp', 'data'")
+
+        # Проверяем существование файла
+        if not os.path.exists(data_path):
+            raise FileNotFoundError(f"Файл данных не найден: {data_path}")
+
+        # Проверяем, что метрика существует в списке метрик
+        if metric not in self.metrics:
+            available_metrics = [m for m in self.metrics if m.startswith(metric.split('.')[0])]
+            print(f"Предупреждение: Метрика '{metric}' не найдена в списке доступных метрик.")
+            if available_metrics:
+                print(f"Возможно вы имели в виду: {available_metrics[:5]}")  # Показываем первые 5 похожих
+
+        try:
+            # Загружаем данные
+            df = pd.read_excel(data_path)
+            print(f"Загружено {len(df)} строк из файла {data_path}")
+
+        except Exception as e:
+            raise Exception(f"Ошибка при загрузке данных из {data_path}: {e}")
+
+        # Проверяем наличие необходимых колонок
+        required_cols = ['vm', 'timestamp', 'metric', 'value']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            raise ValueError(f"В файле отсутствуют необходимые колонки: {missing_cols}")
+
+        # Преобразуем timestamp к datetime если это еще не сделано
+        if not pd.api.types.is_datetime64_any_dtype(df['timestamp']):
+            df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+
+        # Фильтруем по метрике
+        df_filtered = df[df['metric'] == metric].copy()
+
+        if df_filtered.empty:
+            # Если метрика не найдена, показываем доступные метрики
+            available_metrics = df['metric'].unique()
+            print(f"Метрика '{metric}' не найдена в данных.")
+            print(f"Доступные метрики: {list(available_metrics)[:20]}...")  # Показываем первые 20
+            return pd.DataFrame()
+
+        print(f"Найдено {len(df_filtered)} записей для метрики '{metric}'")
+
+        # Фильтруем по дате
+        mask = (df_filtered['timestamp'] >= start_date) & (df_filtered['timestamp'] <= end_date)
+        df_filtered = df_filtered[mask].copy()
+        df_filtered = df_filtered[df_filtered['vm']==vm]
+
+        if df_filtered.empty:
+            print(f"Нет данных для vm '{vm}' и метрики '{metric}' в период с {start_date.date()} по {end_date.date()}")
+            return pd.DataFrame()
+
+        print(f"После фильтрации по датам осталось {len(df_filtered)} записей")
+
+        # Сортируем данные
+        df_filtered = df_filtered.sort_values(['vm', 'timestamp'], ascending=[True, True])
+
+        out_file = f"../data/processed/{vm}_{metric}_{start_date}_{end_date}.xlsx"
+        # Сохраняем результат
+        try:
+            df_filtered.to_excel(out_file, index=False)
+            print(f"Data successfully saved to {out_file}")
+        except Exception as e:
+            print(f"Error saving to Excel: {e}")
+
+        return df_filtered
+
+
+def run_preprocessing():
     # Создаем объект класса DATA для подготовки данных для работы из исходников
     data = DATA()
 
@@ -322,3 +451,21 @@ if __name__ == '__main__':
     print("\n" + "=" * 60)
     print("Processing completed!")
     print("=" * 60)
+
+
+if __name__ == '__main__':
+    # Создаем объект класса DATA для подготовки данных для работы из исходников
+    data = DATA()
+
+    # Сохраняем данные о виртуальных серверах в xlsx файл
+    # df = data.read_all_vm('../data/source/all_vm.txt')
+
+    # Подготавливаем данные
+    # run_preprocessing()
+
+    # Тестируем выгрузку данных для одного сервера и одной метрики за определенный период времени
+    df_filtered = data.process_data_metric('temp',
+                                           'DataLake-DBN1',
+                                           'cpu.usage.average',
+                                           pd.to_datetime('2025-11-25 17:00:00'),
+                                           pd.to_datetime('2025-12-01 23:30:00'))
