@@ -4,9 +4,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict
 import models as db_models
 import schemas as pydantic_models
-import logging
-
-logger = logging.getLogger(__name__)
+from base_logger import logger
 
 
 class FactsCRUD:

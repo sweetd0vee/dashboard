@@ -29,8 +29,8 @@ crud.save_prediction(
     metric=metric,
     timestamp=future_time,
     value=45.6,
-    lower=40.1,
-    upper=50.2
+    lower_bound=40.1,
+    upper_bound=50.2
 )
 
 # 4. Получение всех VM в базе
