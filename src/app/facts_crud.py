@@ -138,7 +138,7 @@ class FactsCRUD:
         Returns:
             Словарь с данными или None
         """
-        # metrics = self.get_latest_metrics(vm, metric, hours)
+        metrics = self.get_metrics_fact(vm, metric, start_date, end_date)
 
         if not metrics:
             return None

@@ -16,7 +16,7 @@ RUN mkdir /work/ui/utils
 
 
 COPY ./src/ui/*.py /work/ui
-COPY ./src/ui/assets/*.py /work/ui/assets
+COPY ./src/ui/assets/*.* /work/ui/assets
 COPY ./src/ui/components/*.py /work/ui/components
 COPY ./src/ui/pages/*.py /work/ui/pages
 COPY ./src/ui/utils/*.py /work/ui/utils

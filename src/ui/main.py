@@ -1,6 +1,8 @@
 import streamlit as st
 # from assets.style import apply_custom_styles
 
+# add to config DASHBOARD_URL=http://127.0.0.1:8000
+
 # Настройка страницы
 st.set_page_config(
     page_title="Анализ нагрузки серверов",

@@ -17,9 +17,13 @@ services:
       KEYCLOAK_URL: ${KEYCLOAK_URL}
       KEYCLOAK_REDIRECT_URI: ${KEYCLOAK_REDIRECT_URI}
       KEYCLOAK_URL_FOR_AUTH: ${KEYCLOAK_URL_FOR_AUTH}
+
       DB_HOST: ${DB_HOST}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
+
+      DASHBOARD_URL: "${DASHBOARD_URL:-http://dashboard:8000}"
+
 #    depends_on:
 #      - llama-server
 #      - postgres
