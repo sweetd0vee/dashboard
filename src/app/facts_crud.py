@@ -122,7 +122,11 @@ class FactsCRUD:
             db_models.ServerMetricsFact.timestamp >= cutoff_time
         ).order_by(db_models.ServerMetricsFact.timestamp).all()
 
-    def get_metrics_as_dataframe(self, vm: str, metric: str, hours: int = 24) -> Optional[Dict]:
+    def get_metrics_as_dataframe(self,
+                                 vm: str,
+                                 metric: str,
+                                 start_date: datetime,
+                                 end_date: datetime) -> Optional[Dict]:
         """
         Получение метрик в удобном для Prophet формате
 
@@ -134,7 +138,7 @@ class FactsCRUD:
         Returns:
             Словарь с данными или None
         """
-        metrics = self.get_latest_metrics(vm, metric, hours)
+        # metrics = self.get_latest_metrics(vm, metric, hours)
 
         if not metrics:
             return None
