@@ -1,9 +1,12 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_, func
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict
 import models as db_models
 import schemas as pydantic_models
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class FactsCRUD:
@@ -14,15 +17,14 @@ class FactsCRUD:
 
     def create_metric_fact(self, metric: pydantic_models.MetricFact) -> db_models.ServerMetricsFact:
         """
-        Создание записи фактического значения исторической метрики
+        Создание или обновление записи фактической метрики (upsert по vm + metric + timestamp)
 
         Args:
             metric: Данные метрики
 
         Returns:
-            Созданная запись
+            Созданная или обновлённая запись
         """
-        # Проверка на дубликаты
         existing = self.db.query(db_models.ServerMetricsFact).filter(
             db_models.ServerMetricsFact.vm == metric.vm,
             db_models.ServerMetricsFact.metric == metric.metric,
@@ -30,13 +32,11 @@ class FactsCRUD:
         ).first()
 
         if existing:
-            # Обновляем существующую запись
             existing.value = metric.value
             self.db.commit()
             self.db.refresh(existing)
             return existing
 
-        # Создаем новую запись
         db_metric = db_models.ServerMetricsFact(
             vm=metric.vm,
             timestamp=metric.timestamp,
@@ -50,13 +50,13 @@ class FactsCRUD:
 
     def create_metrics_fact_batch(self, metrics: List[pydantic_models.MetricFact]) -> int:
         """
-        Пакетное создание фактических исторических метрик
+        Пакетное создание/обновление фактических метрик
 
         Args:
             metrics: Список метрик
 
         Returns:
-            Количество созданных записей
+            Количество успешно обработанных записей
         """
         created_count = 0
         for metric in metrics:
@@ -64,31 +64,29 @@ class FactsCRUD:
                 self.create_metric_fact(metric)
                 created_count += 1
             except Exception as e:
-                # Логируем ошибку, но продолжаем обработку
-                print(f"Error creating metric {metric}: {e}")
-
+                logger.error(f"Error creating metric {metric.vm}/{metric.metric} at {metric.timestamp}: {e}")
         return created_count
 
     def get_metrics_fact(
-            self,
-            vm: str,
-            metric: str,
-            start_date: Optional[datetime] = None,
-            end_date: Optional[datetime] = None,
-            limit: int = 5000
+        self,
+        vm: str,
+        metric: str,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        limit: int = 5000
     ) -> List[db_models.ServerMetricsFact]:
         """
-        Получение исторических метрик с фильтрацией
+        Получение исторических метрик с фильтрацией по времени
 
         Args:
             vm: Имя виртуальной машины
             metric: Тип метрики
-            start_date: Начальная дата
-            end_date: Конечная дата
+            start_date: Начальная дата (включительно)
+            end_date: Конечная дата (включительно)
             limit: Максимальное количество записей
 
         Returns:
-            Список метрик
+            Список записей, отсортированных по времени (ASC)
         """
         query = self.db.query(db_models.ServerMetricsFact).filter(
             db_models.ServerMetricsFact.vm == vm,
@@ -104,68 +102,60 @@ class FactsCRUD:
 
     def get_latest_metrics(self, vm: str, metric: str, hours: int = 24) -> List[db_models.ServerMetricsFact]:
         """
-        Получить последние N часов данных
+        Получить данные за последние N часов
 
         Args:
             vm: Имя виртуальной машины
             metric: Тип метрики
-            hours: Количество часов
+            hours: Количество часов (по умолчанию 24)
 
         Returns:
-            Список метрик
+            Список записей, отсортированных по времени (ASC)
         """
         cutoff_time = datetime.now() - timedelta(hours=hours)
+        return self.get_metrics_fact(vm, metric, start_date=cutoff_time)
 
-        return self.db.query(db_models.ServerMetricsFact).filter(
-            db_models.ServerMetricsFact.vm == vm,
-            db_models.ServerMetricsFact.metric == metric,
-            db_models.ServerMetricsFact.timestamp >= cutoff_time
-        ).order_by(db_models.ServerMetricsFact.timestamp).all()
-
-    def get_metrics_as_dataframe(self,
-                                 vm: str,
-                                 metric: str,
-                                 start_date: datetime,
-                                 end_date: datetime) -> Optional[Dict]:
+    def get_metrics_as_dataframe(
+        self,
+        vm: str,
+        metric: str,
+        start_date: datetime,
+        end_date: datetime
+    ) -> Optional[Dict[str, List]]:
         """
-        Получение метрик в удобном для Prophet формате
+        Получение метрик в формате, совместимом с Prophet ({'ds': [...], 'y': [...]})
 
         Args:
             vm: Имя виртуальной машины
             metric: Тип метрики
-            hours: Количество часов
+            start_date: Начальная дата
+            end_date: Конечная дата
 
         Returns:
-            Словарь с данными или None
+            Словарь с ключами 'ds' (список datetime) и 'y' (список float) или None
         """
         metrics = self.get_metrics_fact(vm, metric, start_date, end_date)
 
         if not metrics:
             return None
 
-        data = {
-            'ds': [],  # timestamps
-            'y': []  # values
+        return {
+            'ds': [record.timestamp for record in metrics],
+            'y': [float(record.value) for record in metrics]
         }
 
-        for metric_record in metrics:
-            data['ds'].append(metric_record.timestamp)
-            data['y'].append(metric_record.value)
-
-        return data
-
-    def get_metrics_facat_statistics(
-            self,
-            vm: str,
-            metric: str,
-            start_date: Optional[datetime] = None,
-            end_date: Optional[datetime] = None
+    def get_metrics_fact_statistics(
+        self,
+        vm: str,
+        metric: str,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
     ) -> Dict:
         """
-        Получение статистики по историческим метрикам
+        Получение агрегированной статистики по метрике
 
         Returns:
-            Словарь со статистикой
+            Словарь: count, min, max, avg, stddev, period
         """
         query = self.db.query(
             func.count(db_models.ServerMetricsFact.id).label('count'),
@@ -185,15 +175,25 @@ class FactsCRUD:
 
         result = query.first()
 
-        if not result:
-            return {}
+        if not result or result.count == 0:
+            return {
+                'count': 0,
+                'min': 0.0,
+                'max': 0.0,
+                'avg': 0.0,
+                'stddev': 0.0,
+                'period': {
+                    'start': start_date.isoformat() if start_date else None,
+                    'end': end_date.isoformat() if end_date else None
+                }
+            }
 
         return {
-            'count': result.count or 0,
-            'min': float(result.min) if result.min else 0.0,
-            'max': float(result.max) if result.max else 0.0,
-            'avg': float(result.avg) if result.avg else 0.0,
-            'stddev': float(result.stddev) if result.stddev else 0.0,
+            'count': result.count,
+            'min': float(result.min) if result.min is not None else 0.0,
+            'max': float(result.max) if result.max is not None else 0.0,
+            'avg': float(result.avg) if result.avg is not None else 0.0,
+            'stddev': float(result.stddev) if result.stddev is not None else 0.0,
             'period': {
                 'start': start_date.isoformat() if start_date else None,
                 'end': end_date.isoformat() if end_date else None

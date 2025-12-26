@@ -10,7 +10,7 @@ class PredsCRUD:
     def __init__(self, db: Session):
         self.db = db
 
-    # ============================= ПРЕДСКАЗАНИЯ ==================================
+    # ================================ ПРЕДСКАЗАНИЯ =====================================
 
     def save_prediction(
             self,
@@ -18,8 +18,8 @@ class PredsCRUD:
             metric: str,
             timestamp: datetime,
             value: float,
-            lower: Optional[float] = None,
-            upper: Optional[float] = None
+            lower_bound: Optional[float] = None,
+            upper_bound: Optional[float] = None
     ) -> db_models.ServerMetricsPredictions:
         """
         Сохранение предсказания
@@ -29,8 +29,8 @@ class PredsCRUD:
             metric: Тип метрики
             timestamp: Время предсказания
             value: Предсказанное значение
-            lower: Нижняя граница доверительного интервала
-            upper: Верхняя граница доверительного интервала
+            lower_bound: Нижняя граница доверительного интервала
+            upper_bound: Верхняя граница доверительного интервала
 
         Returns:
             Созданная запись предсказания
@@ -45,8 +45,8 @@ class PredsCRUD:
         if existing:
             # Обновляем существующее предсказание
             existing.value_predicted = value
-            existing.lower_bound = lower
-            existing.upper_bound = upper
+            existing.lower_bound = lower_bound
+            existing.upper_bound = upper_bound
             existing.created_at = datetime.now()
             self.db.commit()
             self.db.refresh(existing)
@@ -58,8 +58,8 @@ class PredsCRUD:
             metric=metric,
             timestamp=timestamp,
             value_predicted=value,
-            lower_bound=lower,
-            upper_bound=upper,
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
             created_at=datetime.now() #,
             # updated_at=datetime.now()
         )
