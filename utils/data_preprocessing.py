@@ -28,8 +28,32 @@ class DATA():
         return df
 
 
-    def pivot_metrics() -> pd.DataFrame():
-        pass
+    def pivot_metrics(data_path="data/data.csv",
+                     out_path="data/Сводная таблица по метрикам.xlsx"
+                     ) -> pd.DataFrame:
+        """
+        processes csv file with metrics
+        :param data_path: path to file with data for all servers
+        :param out_path: path to save processed data
+        :return: pivot table with all metrics for servers
+        """
+        try:
+            # columns = ['VM_Name', 'vCenter', 'Metric', 'Value', 'Unit', 'Timestamp', 'Date', 'Time']
+            df = pd.read_csv(data_path)
+        except Exception as e:
+            print(f"Ошибка при чтении файла: {e}")
+            return pd.DataFrame()
+
+        df_wide = df.pivot_table(
+            index=['VM_Name', 'vCenter', 'Timestamp'],
+            columns='Metric',
+            values='Value',
+            aggfunc='first'  # на случай дублей
+        ).reset_index()
+
+        df_wide = df_wide.sort_values(['VM_Name', 'vCenter', 'Timestamp']).reset_index(drop=True)
+        df_wide.to_excel(out_path)
+        return df_wide
 
 
 if __name__ == '__main__':

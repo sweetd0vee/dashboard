@@ -1,0 +1,30 @@
+networks:
+    servers-network:
+        external: true
+
+services:
+
+  dashboard:
+    image: arina/sber/dashboard:main
+    container_name: dashboard
+    hostname: dashboard
+    environment:
+
+      UVICORN_ROOT_PATH: /dashboard
+
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      KEYCLOAK_REDIRECT_URI: ${KEYCLOAK_REDIRECT_URI}
+      KEYCLOAK_URL_FOR_AUTH: ${KEYCLOAK_URL_FOR_AUTH}
+
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+#    depends_on:
+#      - llama-server
+#      - postgres
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    networks:
+      - servers-network
+
