@@ -7,19 +7,6 @@ def show_sidebar():
     with st.sidebar:
         st.markdown("## ℹ️ **Информация**")
 
-        # Статус системы
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with st.container():
-            st.markdown("### 📊 Статус системы")
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                st.markdown("🟢")
-            with col2:
-                st.markdown("**Активна**")
-            st.caption(f"Обновлено: {current_time}")
-
-        st.divider()
-
         # Метрики
         st.markdown("### 📈 Ключевые метрики")
         col1, col2 = st.columns(2)
