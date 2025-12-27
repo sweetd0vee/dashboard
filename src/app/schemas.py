@@ -18,20 +18,50 @@ class LoadLevel(str, Enum):
     HIGH = "high"
 
 
-class MetricFact(BaseModel):
+class MetricFactCreate(BaseModel):
+    """Schema for creating a metric fact (without created_at)"""
     vm: str
     timestamp: datetime
     metric: str
     value: float = Field(..., ge=0, le=100)
-    created_at: datetime
+
+
+class MetricFact(BaseModel):
+    """Schema for metric fact response"""
+    id: Optional[str] = None
+    vm: str
+    timestamp: datetime
+    metric: str
+    value: float
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MetricPredictionCreate(BaseModel):
+    """Schema for creating a prediction"""
+    vm: str
+    timestamp: datetime
+    metric: str
+    value_predicted: float = Field(..., ge=0, le=100)
+    lower_bound: Optional[float] = None
+    upper_bound: Optional[float] = None
 
 
 class MetricPrediction(BaseModel):
+    """Schema for prediction response"""
+    id: str
     vm: str
     timestamp: datetime
     metric: str
-    value: float = Field(..., ge=0, le=100)
+    value_predicted: float
+    lower_bound: Optional[float] = None
+    upper_bound: Optional[float] = None
     created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class PredictionRequest(BaseModel):
@@ -82,3 +112,52 @@ class HealthCheck(BaseModel):
     database: bool
     models_loaded: int
     uptime: float
+
+
+class BatchCreateResponse(BaseModel):
+    """Response for batch create operations"""
+    created: int
+    failed: int
+    total: int
+
+
+class DatabaseStatsResponse(BaseModel):
+    """Response for database statistics"""
+    fact_records: int
+    prediction_records: int
+    total_records: int
+    unique_vms: int
+    unique_metrics: int
+    data_volume_mb: float
+    oldest_record: Optional[datetime] = None
+    newest_record: Optional[datetime] = None
+    collection_period_days: int
+
+
+class DataCompletenessResponse(BaseModel):
+    """Response for data completeness analysis"""
+    expected_points: int
+    actual_points: int
+    completeness_percentage: float
+    missing_points: int
+    missing_intervals: List[dict]
+    missing_intervals_count: int
+
+
+class TimeRangeResponse(BaseModel):
+    """Response for time range queries"""
+    first_timestamp: datetime
+    last_timestamp: datetime
+    total_hours: float
+    total_records: int
+
+
+class ActualVsPredictedResponse(BaseModel):
+    """Response for actual vs predicted comparison"""
+    timestamp: datetime
+    actual_value: float
+    predicted_value: float
+    error: float
+    relative_error: float
+    lower_bound: Optional[float] = None
+    upper_bound: Optional[float] = None

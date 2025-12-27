@@ -253,3 +253,81 @@ class DBCRUD:
             'missing_intervals': missing_intervals,
             'missing_intervals_count': len(missing_intervals)
         }
+
+    # ================================== МЕТОДЫ ДЛЯ МЕТРИК ====================================
+
+    def get_historical_metrics(
+            self,
+            vm: str,
+            metric: str,
+            start_date: Optional[datetime] = None,
+            end_date: Optional[datetime] = None,
+            limit: int = 5000
+    ) -> List[db_models.ServerMetricsFact]:
+        """
+        Получение исторических метрик
+
+        Args:
+            vm: Имя виртуальной машины
+            metric: Тип метрики
+            start_date: Начальная дата
+            end_date: Конечная дата
+            limit: Максимальное количество записей
+
+        Returns:
+            Список записей метрик
+        """
+        query = self.db.query(db_models.ServerMetricsFact).filter(
+            db_models.ServerMetricsFact.vm == vm,
+            db_models.ServerMetricsFact.metric == metric
+        )
+
+        if start_date:
+            query = query.filter(db_models.ServerMetricsFact.timestamp >= start_date)
+        if end_date:
+            query = query.filter(db_models.ServerMetricsFact.timestamp <= end_date)
+
+        return query.order_by(db_models.ServerMetricsFact.timestamp).limit(limit).all()
+
+    def get_metrics_by_date_range(
+            self,
+            vm: str,
+            metric: str,
+            start_date: datetime,
+            end_date: datetime,
+            limit: int = 5000
+    ) -> List[db_models.ServerMetricsFact]:
+        """
+        Получение метрик по диапазону дат
+
+        Args:
+            vm: Имя виртуальной машины
+            metric: Тип метрики
+            start_date: Начальная дата
+            end_date: Конечная дата
+            limit: Максимальное количество записей
+
+        Returns:
+            Список записей метрик
+        """
+        return self.get_historical_metrics(vm, metric, start_date, end_date, limit)
+
+    def get_latest_metrics(
+            self,
+            vm: str,
+            metric: str,
+            hours: int = 24
+    ) -> List[db_models.ServerMetricsFact]:
+        """
+        Получение последних N часов метрик
+
+        Args:
+            vm: Имя виртуальной машины
+            metric: Тип метрики
+            hours: Количество часов
+
+        Returns:
+            Список записей метрик
+        """
+        cutoff_time = datetime.now() - timedelta(hours=hours)
+        return self.get_historical_metrics(vm, metric, start_date=cutoff_time)
