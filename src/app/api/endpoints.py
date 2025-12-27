@@ -4,10 +4,10 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict
 
 from ..connection import get_db
-import ..schemas as pydantic_models
 from ..dbcrud import DBCRUD
 from ..facts_crud import FactsCRUD
 from ..preds_crud import PredsCRUD
+import ..schemas as pydantic_models
 from base_logger import logger
 
 router = APIRouter()

@@ -1,10 +1,47 @@
+"""
+Data generator - now loads data from database instead of generating random data.
+This file is kept for backward compatibility.
+For new code, use data_loader.py directly.
+"""
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+import sys
+import os
+
+# Import the new data loader
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
+
+try:
+    from data_loader import generate_server_data as load_from_db, generate_forecast as forecast_from_db
+    _USE_DATABASE = True
+except ImportError:
+    _USE_DATABASE = False
+    print("Warning: data_loader not available, using fallback generation")
 
 
 def generate_server_data():
-    """Генерация тестовых данных с аномалиями и паттернами сбоев"""
+    """
+    Load server data from database.
+    Falls back to generated data if database is not available.
+    """
+    # Try to load from database first
+    if _USE_DATABASE:
+        try:
+            df = load_from_db()
+            if not df.empty:
+                return df
+        except Exception as e:
+            print(f"Warning: Could not load from database: {e}")
+            print("Falling back to generated data")
+    
+    # Fallback to original generation logic
+    return _generate_fallback_data()
+
+
+def _generate_fallback_data():
+    """Генерация тестовых данных с аномалиями и паттернами сбоев (fallback)"""
     servers = [
         "Web-Server-01", "Web-Server-02", "API-Server-01",
         "API-Server-02", "Database-01", "Database-02",
@@ -117,12 +154,15 @@ def generate_server_data():
             if server_type == 'Web' or server_type == 'API':
                 network_in = load * 15 + np.random.normal(150, 50)
                 network_out = load * 20 + np.random.normal(200, 60)
+                network_usage = (network_in + network_out) / 2
             elif server_type == 'Database':
                 network_in = load * 5 + np.random.normal(50, 20)
                 network_out = load * 8 + np.random.normal(80, 30)
+                network_usage = (network_in + network_out) / 2
             else:
                 network_in = load * 10 + np.random.normal(100, 30)
                 network_out = load * 12 + np.random.normal(120, 35)
+                network_usage = (network_in + network_out) / 2
 
             # CPU ready time зависит от нагрузки
             cpu_ready_summation = np.random.uniform(0, load * 0.25)
@@ -166,7 +206,22 @@ def generate_server_data():
 
 
 def generate_forecast(historical_data, hours=48):
-    """Генерация прогноза"""
+    """
+    Generate forecast from historical data.
+    Uses database loader if available, otherwise uses simple forecast.
+    """
+    if _USE_DATABASE:
+        try:
+            return forecast_from_db(historical_data, hours)
+        except Exception as e:
+            print(f"Warning: Could not use database forecast: {e}")
+    
+    # Fallback to original forecast logic
+    return _generate_fallback_forecast(historical_data, hours)
+
+
+def _generate_fallback_forecast(historical_data, hours=48):
+    """Генерация прогноза (fallback)"""
     if historical_data.empty:
         return pd.DataFrame()
 
