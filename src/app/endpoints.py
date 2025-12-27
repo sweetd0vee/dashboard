@@ -13,13 +13,13 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 
-from ..connection import get_db
-import ..schemas as pydantic_models
-from ..dbcrud import DBCRUD
-from ..facts_crud import FactsCRUD
-from ..preds_crud import PredsCRUD
+from connection import get_db
+import schemas as pydantic_models
+from dbcrud import DBCRUD
+from facts_crud import FactsCRUD
+from preds_crud import PredsCRUD
 from base_logger import logger
-import ..models as db_models
+import models as db_models
 
 router = APIRouter()
 
