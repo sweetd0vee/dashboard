@@ -464,8 +464,14 @@ if __name__ == '__main__':
     # run_preprocessing()
 
     # Тестируем выгрузку данных для одного сервера и одной метрики за определенный период времени
-    df_filtered = data.process_data_metric('temp',
+    df_train = data.process_data_metric('temp',
                                            'DataLake-DBN1',
                                            'cpu.usage.average',
                                            pd.to_datetime('2025-11-25 17:00:00'),
-                                           pd.to_datetime('2025-12-01 23:30:00'))
+                                           pd.to_datetime('2025-11-30 23:30:00'))
+
+    df_test = data.process_data_metric('temp',
+                                        'DataLake-DBN1',
+                                       'cpu.usage.average',
+                                       pd.to_datetime('2025-12-01 00:00:00'),
+                                       pd.to_datetime('2025-12-01 23:30:00'))

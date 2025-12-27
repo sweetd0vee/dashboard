@@ -4,21 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Dict, Optional, Tuple
 import streamlit as st
-
-
-class ServerStatus(Enum):
-    """Статус сервера"""
-    OVERLOADED = "overloaded"  # Загружен
-    UNDERLOADED = "underloaded"  # Простаивает
-    NORMAL = "normal"  # Норма
-    UNKNOWN = "unknown"  # Неизвестно
-
-
-class AlertSeverity(Enum):
-    """Уровень серьезности алерта"""
-    CRITICAL = "critical"  # Критический
-    WARNING = "warning"  # Предупреждение
-    INFO = "info"  # Информационный
+from alert_rules import ServerStatus, AlertSeverity
 
 
 class Alert:
@@ -260,7 +246,7 @@ def analyze_server_alerts(
     normal_rules = [
         {
             'name': 'normal_cpu_range',
-            'metric': 'cpu_usage',
+            'metric': 'cpu.usage.average',
             'min': th['cpu_normal_min'],
             'max': th['cpu_normal_max'],
             'severity': AlertSeverity.INFO,
@@ -276,7 +262,7 @@ def analyze_server_alerts(
         },
         {
             'name': 'normal_network_range',
-            'metric': 'network_usage_percent',
+            'metric': 'net.usage.average',
             'min': th['network_normal_min'],
             'max': th['network_normal_max'],
             'severity': AlertSeverity.INFO,

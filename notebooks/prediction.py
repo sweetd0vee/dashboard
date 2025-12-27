@@ -75,13 +75,12 @@ class DataPreprocessor:
 
         # Фильтрация и сортировка
         df_filtered = df.copy()
-        # df_filtered = df[df['VM_Name'] == server].copy()
-        df_filtered = df_filtered.sort_values('Timestamp')
+        df_filtered = df_filtered.sort_values('timestamp')
 
         # Создание структуры для Prophet
         prophet_df = pd.DataFrame({
-            'ds': pd.to_datetime(df_filtered['Timestamp']),
-            'y': df_filtered[metric].astype(float)
+            'ds': pd.to_datetime(df_filtered['timestamp']),
+            'y': df_filtered['value'].astype(float)
         })
 
         # Удаление дубликатов
@@ -592,8 +591,8 @@ def run_production_pipeline(df_path: str,
         # 1. Загрузка данных
         logger.info("Step 1: Loading data...")
         df = pd.read_excel(df_path)
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'],
-                                         format="%d.%m.%y %H:%M:%S",
+        df['timestamp'] = pd.to_datetime(df['timestamp'],
+                                         format="%Y-%m-%d %H:%M:%S",
                                          errors='coerce')
 
         # 2. Предобработка
@@ -689,9 +688,8 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Server metrics forecasting')
-    # parser.add_argument('--data', type=str, default='../data/Сводная таблица по метрикам.xlsx',
-    #                     help='Path to data file')
-    parser.add_argument('--data', type=str, default='../data/DataLake-DBN1_cpu-usage_train.xlsx',
+    parser.add_argument('--data', type=str,
+                        default='/Users/sweetd0ve/dashboard/data/processed/DataLake-DBN1_cpu.usage.average_2025-11-25 17:00:00_2025-11-30 23:30:00.xlsx',
                          help='Path to data file')
     parser.add_argument('--server', type=str, default='DataLake-DBN1',
                         help='Server name')
