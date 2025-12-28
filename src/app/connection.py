@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 # from contextlib import contextmanager
 import os
 from dotenv import load_dotenv
-# from base_logger import logger
+from base_logger import logger
 
 load_dotenv()
 
@@ -15,8 +15,10 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "server_metrics") # TODO переписать конфиг
 
+
 # Создаем строку подключения
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+logger.info(f"DATABASE_URL: {DATABASE_URL}")
 
 # Создаем движок SQLAlchemy
 engine = create_engine(
