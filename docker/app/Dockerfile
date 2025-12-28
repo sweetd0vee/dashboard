@@ -9,11 +9,10 @@ RUN pip install --no-cache-dir --timeout 1000 --retries 5 -r requirements.txt
 
 
 RUN mkdir /work/app
-RUN mkdir /work/app/api
 
 
 COPY ./src/app/*.py /work/app
-COPY ./src/app/api/*.py /work/app/api
+
 
 COPY ./base_logger.py /work
 

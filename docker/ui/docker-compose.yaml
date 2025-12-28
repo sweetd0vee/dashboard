@@ -5,14 +5,14 @@ networks:
 services:
 
   dashboard-ui:
-    image: arina/sber/dashboard-ui:main
-    container_name: dashboard-ui
-    hostname: dashboard-ui
+    image: arina/sber/dashboard:main
+    container_name: dashboard
+    hostname: dashboard
     environment:
 
       STREAMLIT_SERVER_PORT: 8501
       STREAMLIT_SERVER_ADDRESS: 0.0.0.0
-      STREAMLIT_SERVER_BASE_URL_PATH: /dashboard-ui
+      STREAMLIT_SERVER_BASE_URL_PATH: /dashboard
 
       KEYCLOAK_URL: ${KEYCLOAK_URL}
       KEYCLOAK_REDIRECT_URI: ${KEYCLOAK_REDIRECT_URI}

@@ -5,12 +5,12 @@ networks:
 services:
 
   dashboard:
-    image: arina/sber/dashboard:main
-    container_name: dashboard
-    hostname: dashboard
+    image: arina/sber/dashboard-be:main
+    container_name: dashboard-be
+    hostname: dashboard-be
     environment:
 
-      UVICORN_ROOT_PATH: /dashboard
+      UVICORN_ROOT_PATH: /dashboard-be
 
       KEYCLOAK_URL: ${KEYCLOAK_URL}
       KEYCLOAK_REDIRECT_URI: ${KEYCLOAK_REDIRECT_URI}

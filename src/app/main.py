@@ -11,7 +11,7 @@ import models as db_models
 # from .crud import DBCRUD
 # from prophet_service import ProphetForecaster
 # from anomaly_detector import AnomalyDetector
-from api.endpoints import router as api_router
+from endpoints import router as api_router
 from base_logger import logger
 
 # Создание таблиц

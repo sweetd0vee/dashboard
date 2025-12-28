@@ -88,6 +88,8 @@ services:
     hostname: llama-server
     environment:
       GGML_CPU_N_THREADS: 16
+      # LLAMA_BASE_URL: http://llama-server:8080/llama-server
+      # OPENAI_API_BASE: http://llama-server:8080/llama-server/v1
     command: >
       --model /work/models/qwen2.5-3b-instruct-q6_k.gguf
       --port 8080
@@ -111,12 +113,12 @@ services:
 #-------------------------------------------------------------------
 
 #  dashboard:
-#    image: arina/sber/dashboard:main
-#    container_name: dashboard
-#    hostname: dashboard
+#    image: arina/sber/dashboard-be:main
+#    container_name: dashboard-be
+#    hostname: dashboard-be
 #    environment:
 #
-#      UVICORN_ROOT_PATH: /dashboard
+#      UVICORN_ROOT_PATH: /dashboard-be
 #
 #      KEYCLOAK_URL: ${KEYCLOAK_URL}
 #      KEYCLOAK_REDIRECT_URI: ${KEYCLOAK_REDIRECT_URI}
@@ -134,28 +136,29 @@ services:
 #    networks:
 #      - servers-network
 
-#  dashboard-ui:
-#    image: arina/sber/dashboard-ui:main
-#    container_name: dashboard-ui
-#    hostname: dashboard-ui
-#    environment:
-#
-#      STREAMLIT_SERVER_PORT: 8501
-#      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
-#      STREAMLIT_SERVER_BASE_URL_PATH: /dashboard-ui
-#
-#      KEYCLOAK_URL: ${KEYCLOAK_URL}
-#      KEYCLOAK_REDIRECT_URI: ${KEYCLOAK_REDIRECT_URI}
-#      KEYCLOAK_URL_FOR_AUTH: ${KEYCLOAK_URL_FOR_AUTH}
-#      DB_HOST: ${DB_HOST}
-#      DB_USER: ${DB_USER}
-#      DB_PASSWORD: ${DB_PASSWORD}
-##    depends_on:
-##      - llama-server
-##      - postgres
-#    ports:
-#      - "8050:8050"
-#      - "8501:8501"
-#    restart: unless-stopped
-#    networks:
-#      - servers-network
+  dashboard-ui:
+    image: arina/sber/dashboard:main
+    container_name: dashboard
+    hostname: dashboard
+    environment:
+
+      STREAMLIT_SERVER_PORT: 8501
+      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
+      STREAMLIT_SERVER_BASE_URL_PATH: /dashboard
+
+      KEYCLOAK_URL: ${KEYCLOAK_URL}
+      KEYCLOAK_REDIRECT_URI: ${KEYCLOAK_REDIRECT_URI}
+      KEYCLOAK_URL_FOR_AUTH: ${KEYCLOAK_URL_FOR_AUTH}
+
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+#    depends_on:
+#      - llama-server
+#      - postgres
+    ports:
+      - "8050:8050"
+      - "8501:8501"
+    restart: unless-stopped
+    networks:
+      - servers-network
