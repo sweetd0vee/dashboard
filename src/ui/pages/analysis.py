@@ -510,7 +510,7 @@ def show():
     def check_llama_availability():
         try:
             response = requests.get(f"{LLAMA_UI_URL_HEALTH}/health", timeout=5)
-            return response.status_code == 200, LLAMA_UI_URL_HEALTH
+            return response.status_code == 200, LLAMA_UI_URL
         except requests.exceptions.RequestException:
             try:
                 response = requests.get(f"{LLAMA_UI_URL}", timeout=5)

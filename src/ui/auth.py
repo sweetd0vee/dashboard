@@ -17,13 +17,18 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from base_logger import logger
 
 # Configuration (should be in environment variables in production)
-KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://localhost:8087/keycloak")
-KEYCLOAK_URL_FOR_AUTH = os.getenv("KEYCLOAK_URL_FOR_AUTH", "http://localhost:8087/keycloak")
-
+# ----without httpd proxy----
+# KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://localhost:8087/keycloak")
+# KEYCLOAK_URL_FOR_AUTH = os.getenv("KEYCLOAK_URL_FOR_AUTH", "http://localhost:8087/keycloak")
+# KEYCLOAK_REDIRECT_URI = os.getenv("KEYCLOAK_REDIRECT_URI", "http://localhost:8501/dashboard")
+# ----with httpd proxy----
+KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://localhost/keycloak")
+KEYCLOAK_URL_FOR_AUTH = os.getenv("KEYCLOAK_URL_FOR_AUTH", "http://localhost/keycloak")
+KEYCLOAK_REDIRECT_URI = os.getenv("KEYCLOAK_REDIRECT_URI", "http://localhost/dashboard")
+#----
 KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "srv")
 KEYCLOAK_CLIENT_ID = os.getenv("KEYCLOAK_CLIENT_ID", "srv-keycloak-client")
 KEYCLOAK_CLIENT_SECRET = os.getenv("KEYCLOAK_CLIENT_SECRET", "12tbrbzRuSX48jI08yPKdxo8OcqtPhrq")
-KEYCLOAK_REDIRECT_URI = os.getenv("KEYCLOAK_REDIRECT_URI", "http://localhost:8501/dashboard")
 
 # Keycloak endpoints
 KEYCLOAK_AUTH_URL = f"{KEYCLOAK_URL_FOR_AUTH}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/auth"
