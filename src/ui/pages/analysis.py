@@ -90,8 +90,71 @@ def load_all_servers():
         return []
 
 
+# Функция для проверки доступности Llama UI
+@st.cache_data(ttl=30)
+def check_llama_availability():
+    LLAMA_UI_URL_HEALTH = "http://llama-server:8080"
+    LLAMA_UI_URL = "http://localhost:8080"
+
+    try:
+        response = requests.get(f"{LLAMA_UI_URL_HEALTH}/health", timeout=5)
+        return response.status_code == 200, LLAMA_UI_URL
+    except requests.exceptions.RequestException:
+        try:
+            response = requests.get(f"{LLAMA_UI_URL}", timeout=5)
+            return response.status_code == 200, LLAMA_UI_URL
+        except:
+            return False, LLAMA_UI_URL
+
+
 def show():
     """Страница общего анализа"""
+
+    # Кнопка перехода в LLM UI в начале страницы
+    st.markdown("### 🤖 Переход в LLM интерфейс")
+
+    # Проверяем доступность
+    is_available, llama_url = check_llama_availability()
+
+    # Создаем кнопку
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+    with col2:
+        if is_available:
+            if st.button(
+                    "🚀 Перейти в LLM UI",
+                    type="primary",
+                    use_container_width=True,
+                    help="Откроет интерфейс LLM в новой вкладке",
+                    key="llma_ui_button_top"
+            ):
+                # Используем markdown с ссылкой для открытия в новой вкладке
+                st.markdown(f'<a href="{llama_url}" target="_blank" style="display: none;" id="llama-link"></a>',
+                            unsafe_allow_html=True)
+                st.success(f"✅ LLM UI доступен по адресу: {llama_url}")
+                # Добавляем JavaScript для открытия ссылки
+                st.components.v1.html(f"""
+                    <script>
+                        window.open("{llama_url}", "_blank");
+                    </script>
+                """, height=0)
+        else:
+            st.warning("⚠️ LLM UI временно недоступен")
+
+            if st.button("🔄 Проверить доступность снова",
+                         use_container_width=True,
+                         key="check_llama_availability_button"):
+                st.cache_data.clear()  # Очищаем кэш
+                st.rerun()
+
+            st.info("""
+            **Возможные причины:**
+            - Сервер LLM не запущен
+            - Контейнер llama-server не активен
+            - Порт 8080 занят другим приложением
+            """)
+
+    st.divider()
     st.markdown('<h2 class="sub-header">📊 Общий анализ нагрузки серверов</h2>', unsafe_allow_html=True)
 
     try:
@@ -496,63 +559,3 @@ def show():
         with st.expander("Детали ошибки"):
             st.code(traceback.format_exc())
         st.info("💡 Убедитесь, что база данных доступна и содержит данные.")
-
-    # Добавляем кнопку для перехода в LLM UI в конце страницы
-    st.divider()
-    st.markdown("### 🤖 Переход в LLM интерфейс")
-
-    # Проверяем доступность контейнера Llama
-    LLAMA_UI_URL_HEALTH = "http://llama-server:8080"
-    LLAMA_UI_URL = "http://localhost:8080"  # Уточнен порт
-
-    # Функция для проверки доступности (выполняется на сервере)
-    @st.cache_data(ttl=30)  # Кэшируем результат на 30 секунд
-    def check_llama_availability():
-        try:
-            response = requests.get(f"{LLAMA_UI_URL_HEALTH}/health", timeout=5)
-            return response.status_code == 200, LLAMA_UI_URL
-        except requests.exceptions.RequestException:
-            try:
-                response = requests.get(f"{LLAMA_UI_URL}", timeout=5)
-                return response.status_code == 200, LLAMA_UI_URL
-            except:
-                return False, LLAMA_UI_URL
-
-    # Проверяем доступность
-    is_available, llama_url = check_llama_availability()
-
-    # Создаем кнопку
-    col1, col2, col3 = st.columns([1, 2, 1])
-
-    with col2:
-        if is_available:
-            if st.button(
-                    "🚀 Перейти в LLM UI",
-                    type="primary",
-                    use_container_width=True,
-                    help="Откроет интерфейс LLM в новой вкладке"
-            ):
-                # Используем markdown с ссылкой для открытия в новой вкладке
-                st.markdown(f'<a href="{llama_url}" target="_blank" style="display: none;" id="llama-link"></a>',
-                            unsafe_allow_html=True)
-                st.success(f"✅ LLM UI доступен по адресу: {llama_url}")
-                # Добавляем JavaScript для открытия ссылки
-                st.components.v1.html(f"""
-                    <script>
-                        window.open("{llama_url}", "_blank");
-                    </script>
-                """, height=0)
-        else:
-            st.warning("⚠️ LLM UI временно недоступен")
-
-            if st.button("🔄 Проверить доступность снова", use_container_width=True):
-                st.cache_data.clear()  # Очищаем кэш
-                st.rerun()
-
-            st.info("""
-            **Возможные причины:**
-            - Сервер LLM не запущен
-            - Контейнер llama-server не активен
-            - Порт 8080 занят другим приложением
-            ```
-            """)
