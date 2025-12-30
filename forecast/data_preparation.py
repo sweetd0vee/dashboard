@@ -1,7 +1,7 @@
 import pandas as pd
 import logging
 from typing import List, Dict
-from .utils import add_time_features, now_utc
+from utils import add_time_features, now_utc
 
 
 logger = logging.getLogger(__name__)

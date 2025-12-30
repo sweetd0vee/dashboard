@@ -6,8 +6,8 @@ from prophet import Prophet
 from prophet.diagnostics import cross_validation, performance_metrics
 import numpy as np
 import pandas as pd
-from .config import DEFAULT_PARAM_GRID, CONDITIONAL_SEASONALITIES
-from .evaluation import calculate_simple_metrics
+from config import DEFAULT_PARAM_GRID, CONDITIONAL_SEASONALITIES
+from evaluation import calculate_simple_metrics
 
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from facts_crud import DBCRUD
+from dbcrud import DBCRUD
 from prophet_forecaster import ProphetForecaster
 
 # Настройка базы данных
@@ -10,6 +10,7 @@ SessionLocal = sessionmaker(bind=engine)
 
 # Создание сессии
 session = SessionLocal()
+# DBCRUD используется для получения исторических данных
 crud = DBCRUD(session)
 
 # Создание прогнозировщика

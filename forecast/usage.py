@@ -1,5 +1,5 @@
 from forecaster import ProphetForecaster
-from src.app.facts_crud import DBCRUD
+from src.app.dbcrud import DBCRUD
 from src.app.connection import SessionLocal
 
 forecaster = ProphetForecaster()

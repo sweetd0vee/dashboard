@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from prophet import Prophet
-from .config import CONDITIONAL_SEASONALITIES
-from .utils import add_time_features
+from config import CONDITIONAL_SEASONALITIES
+from utils import add_time_features
 
 
 def predict(model: Prophet, model_metadata: dict, periods: int = 48, freq: str = '30min') -> pd.DataFrame:

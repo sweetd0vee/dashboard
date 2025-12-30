@@ -11,7 +11,7 @@ import logging
 from itertools import product
 import random
 from sqlalchemy.orm import Session
-from facts_crud import DBCRUD
+from dbcrud import DBCRUD
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -503,7 +503,7 @@ class ProphetForecaster:
         if not retrain:
             try:
                 model_files = [f for f in os.listdir(self.model_storage_path)
-                               if f.startswith(f"{vm}_{metric}_prophet")]
+                               if f.startswith(f"{vm}_{metric}_prophet") and f.endswith('.pkl')]
 
                 if model_files:
                     # Берем самую новую модель
@@ -600,13 +600,15 @@ class ProphetForecaster:
                 # Сохранение в БД
                 if save_to_db:
                     try:
-                        crud.save_prediction(
+                        from preds_crud import PredsCRUD
+                        preds_crud = PredsCRUD(db)
+                        preds_crud.save_prediction(
                             vm=vm,
                             metric=metric,
                             timestamp=row['ds'],
                             value=float(row['yhat']),
-                            lower=float(row.get('yhat_lower', 0)),
-                            upper=float(row.get('yhat_upper', 0))
+                            lower_bound=float(row.get('yhat_lower', 0)),
+                            upper_bound=float(row.get('yhat_upper', 0))
                         )
                     except Exception as db_error:
                         logger.warning(f"Failed to save prediction to DB: {db_error}")

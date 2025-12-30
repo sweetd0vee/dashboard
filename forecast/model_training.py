@@ -4,9 +4,9 @@ import json
 import os
 from datetime import timedelta
 from prophet import Prophet
-from .config import CONDITIONAL_SEASONALITIES
-from .evaluation import calculate_simple_metrics
-from .utils import now_utc
+from config import CONDITIONAL_SEASONALITIES
+from evaluation import calculate_simple_metrics
+from utils import now_utc
 
 
 def train_model(
